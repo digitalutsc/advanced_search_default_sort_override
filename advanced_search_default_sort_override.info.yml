@@ -1,0 +1,5 @@
+name: 'Advanced Search View Default Sort'
+type: module
+description: 'This module provide default sort for Advanced Search view.'
+package: 'islandora_lite'
+core_version_requirement: ^10 || ^11

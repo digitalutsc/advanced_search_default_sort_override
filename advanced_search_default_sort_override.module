@@ -1,0 +1,70 @@
+<?php
+
+/**
+ * @file
+ * Contains advanced_search_tips.module.
+ */
+
+use \Drupal\Core\Routing\RouteMatchInterface;
+use \Drupal\node\Entity\Node;
+use Drupal\views\ViewExecutable;
+
+/**
+ * Implements hook_help().
+ */
+function advanced_search_default_sort_override_help($route_name, RouteMatchInterface $route_match) {
+  switch ($route_name) {
+    // Main module help for the advanced_search_tips module.
+    case 'help.page.advanced_search_default_sort_override':
+      $output = '';
+      $output .= '<h3>' . t('About') . '</h3>';
+      $output .= '<p>' . t('My Awesome Module') . '</p>';
+      return $output;
+
+    default:
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function advanced_search_default_sort_override_theme() {
+  return [
+    'advanced_search_default_sort_override' => [
+      'render element' => 'children',
+    ],
+  ];
+}
+
+/**
+ * Implements hook_views_pre_view().
+ */
+function advanced_search_default_sort_override_views_pre_view(ViewExecutable $view, $display_id, array &$args) {
+  if ($_SERVER['SERVER_NAME'] == \Drupal::request()->getHost() && $view->id() == "browse_events") {
+    $paramList = \Drupal::request()->query->all();
+    //if (array_key_exists('a', $paramList) || array_key_exists('sort_order', $paramList)) {
+    if (count($paramList) > 0) { 
+      $sorts = $view->getHandlers('sort');
+      foreach (array_keys($sorts) as $key => $sort) { 
+        drupal_log($sort);
+        if (strpos($sort, "field_weight") !== false){ 
+          unset($sorts[$sort]);
+        } 
+      }
+      $view->display_handler->overrideOption('sorts', $sorts);
+    }
+  }
+  else if ($_SERVER['SERVER_NAME'] == \Drupal::request()->getHost() && $view->id() == "advanced_search") {
+    $paramList = \Drupal::request()->query->all();
+    //if (array_key_exists('a', $paramList)) {
+    if (count($paramList) > 0) {
+      $sorts = $view->getHandlers('sort');
+      foreach (array_keys($sorts) as $key => $sort) {
+        if (strpos($sort, "title") !== false){
+          unset($sorts[$sort]);
+        }
+      }
+      $view->display_handler->overrideOption('sorts', $sorts);
+    }
+  }  
+}
