@@ -1,0 +1,7 @@
+{
+    "name": "islandora_lite/advanced_search_default_sort_override",
+    "description": "This module provide a action hook to remove default sort fields in Advanced Search View. This is use case in FJT and ECN when search view being requested to be sorted by specifically fields",
+    "type": "drupal-module",
+    "minimum-stability": "dev",
+    "require": {}
+}
