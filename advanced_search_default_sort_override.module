@@ -40,31 +40,95 @@ function advanced_search_default_sort_override_theme() {
  * Implements hook_views_pre_view().
  */
 function advanced_search_default_sort_override_views_pre_view(ViewExecutable $view, $display_id, array &$args) {
-  if ($_SERVER['SERVER_NAME'] == \Drupal::request()->getHost() && $view->id() == "browse_events") {
-    $paramList = \Drupal::request()->query->all();
-    //if (array_key_exists('a', $paramList) || array_key_exists('sort_order', $paramList)) {
-    if (count($paramList) > 0) { 
-      $sorts = $view->getHandlers('sort');
-      foreach (array_keys($sorts) as $key => $sort) { 
-        drupal_log($sort);
-        if (strpos($sort, "field_weight") !== false){ 
-          unset($sorts[$sort]);
-        } 
+  // Only run on views except for the admin UI.
+  if (\Drupal::service('router.admin_context')->isAdminRoute()) {
+    return;
+  }
+
+  // Flag to keep track of any changes we make.
+  $modified = FALSE;
+
+  $paramList = \Drupal::request()->query->all();
+
+  // Only do the processing if there is any active search.
+  if (count($paramList) > 0) {
+    $sorts = $view->getHandlers('sort');
+
+    // Iterate through sorts and remove if the "Default sort only" checkbox is checked.
+    foreach ($sorts as $key => $sort) {
+      if (!empty($sort['default_sort_only'])) {
+        unset($sorts[$key]);
+        $modified = TRUE;
       }
-      $view->display_handler->overrideOption('sorts', $sorts);
     }
   }
-  else if ($_SERVER['SERVER_NAME'] == \Drupal::request()->getHost() && $view->id() == "advanced_search") {
-    $paramList = \Drupal::request()->query->all();
-    //if (array_key_exists('a', $paramList)) {
-    if (count($paramList) > 0) {
-      $sorts = $view->getHandlers('sort');
-      foreach (array_keys($sorts) as $key => $sort) {
-        if (strpos($sort, "title") !== false){
-          unset($sorts[$sort]);
-        }
-      }
-      $view->display_handler->overrideOption('sorts', $sorts);
-    }
-  }  
+
+  // Use the modified sorts only if we changed something.
+  if ($modified) {
+    $view->display_handler->overrideOption('sorts', $sorts);
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter() for views_ui_config_item_form.
+ */
+function advanced_search_default_sort_override_form_views_ui_config_item_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id) {
+  // Only alter sort handler forms.
+  if ($form_state->get('type') !== 'sort') {
+    return;
+  }
+
+  // Get the current saved value for this handler.
+  $handler = $form_state->get('handler');
+  $default_value = !empty($handler->options['default_sort_only']);
+
+  // Add the checkbox under $form['options'].
+  $form['options']['default_sort_only'] = [
+    '#type' => 'checkbox',
+    '#title' => t('Default sort only'),
+    '#description' => t('When checked, this sort will only be used as the default sort order and will be removed when a user performs a search.'),
+    '#default_value' => $default_value,
+  ];
+
+  // Add custom submit callback to save the new checkbox value,
+  // Since by default it only saves the defined data.
+  $form['actions']['submit']['#submit'][] = 'advanced_search_default_sort_override_config_item_form_submit';
+}
+
+/**
+ * Custom submit callback for views_ui_config_item_form.
+ *
+ * Runs after core's submit handler to re-inject the 'default_sort_only' flag
+ * into the saved handler options, since core's unpackOptions() only keeps
+ * options that are declared in the handler's defineOptions().
+ */
+function advanced_search_default_sort_override_config_item_form_submit(array &$form, \Drupal\Core\Form\FormStateInterface $form_state) {
+  $view = $form_state->get('view');
+  $display_id = $form_state->get('display_id');
+  $type = $form_state->get('type');
+  $id = $form_state->get('id');
+
+  // Only act on sort handlers.
+  if ($type !== 'sort') {
+    return;
+  }
+
+  $executable = $view->getExecutable();
+  $executable->setDisplay($display_id);
+
+  // Read the checkbox value from the submitted form values.
+  $default_sort_only = (bool) $form_state->getValue(['options', 'default_sort_only'], FALSE);
+
+  // Get the handler options already saved by core's submit handler.
+  $item = $executable->getHandler($display_id, $type, $id);
+  if (empty($item)) {
+    return;
+  }
+
+  // Inject the flag and re-save.
+  $item['default_sort_only'] = $default_sort_only;
+  $executable->setHandler($display_id, $type, $id, $item);
+
+  // Write back to the Views cache so the value is persisted.
+  $view->cacheSet();
 }
