@@ -37,35 +37,27 @@ function advanced_search_default_sort_override_theme() {
 }
 
 /**
- * Implements hook_views_pre_view().
+ * Implements hook_views_pre_build().
+ * 
+ * Replaces hook_views_pre_view. This modifiees the live objects instead of the config array.
  */
-function advanced_search_default_sort_override_views_pre_view(ViewExecutable $view, $display_id, array &$args) {
+function advanced_search_default_sort_override_views_pre_build(ViewExecutable $view) {
   // Only run on views except for the admin UI.
   if (\Drupal::service('router.admin_context')->isAdminRoute()) {
     return;
   }
 
-  // Flag to keep track of any changes we make.
-  $modified = FALSE;
-
   $paramList = \Drupal::request()->query->all();
 
   // Only do the processing if there is any active search.
   if (count($paramList) > 0) {
-    $sorts = $view->getHandlers('sort');
-
-    // Iterate through sorts and remove if the "Default sort only" checkbox is checked.
-    foreach ($sorts as $key => $sort) {
-      if (!empty($sort['default_sort_only'])) {
-        unset($sorts[$key]);
-        $modified = TRUE;
+    // Iterate through the LIVE instantiated sort objects.
+    foreach ($view->sort as $id => $handler) {
+      if (!empty($handler->options['default_sort_only'])) {
+        // Unset the live object sort.
+        unset($view->sort[$id]);
       }
     }
-  }
-
-  // Use the modified sorts only if we changed something.
-  if ($modified) {
-    $view->display_handler->overrideOption('sorts', $sorts);
   }
 }
 
