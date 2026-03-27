@@ -5,8 +5,8 @@
  * Contains advanced_search_tips.module.
  */
 
-use \Drupal\Core\Routing\RouteMatchInterface;
-use \Drupal\node\Entity\Node;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\views\ViewExecutable;
 
 /**
@@ -38,8 +38,9 @@ function advanced_search_default_sort_override_theme() {
 
 /**
  * Implements hook_views_pre_build().
- * 
- * Replaces hook_views_pre_view. This modifiees the live objects instead of the config array.
+ *
+ * Replaces hook_views_pre_view.
+ * This modifies the live objects instead of the config array.
  */
 function advanced_search_default_sort_override_views_pre_build(ViewExecutable $view) {
   // Only run on views except for the admin UI.
@@ -64,7 +65,7 @@ function advanced_search_default_sort_override_views_pre_build(ViewExecutable $v
 /**
  * Implements hook_form_FORM_ID_alter() for views_ui_config_item_form.
  */
-function advanced_search_default_sort_override_form_views_ui_config_item_form_alter(&$form, \Drupal\Core\Form\FormStateInterface $form_state, $form_id) {
+function advanced_search_default_sort_override_form_views_ui_config_item_form_alter(&$form, FormStateInterface $form_state, $form_id) {
   // Only alter sort handler forms.
   if ($form_state->get('type') !== 'sort') {
     return;
@@ -94,7 +95,7 @@ function advanced_search_default_sort_override_form_views_ui_config_item_form_al
  * into the saved handler options, since core's unpackOptions() only keeps
  * options that are declared in the handler's defineOptions().
  */
-function advanced_search_default_sort_override_config_item_form_submit(array &$form, \Drupal\Core\Form\FormStateInterface $form_state) {
+function advanced_search_default_sort_override_config_item_form_submit(array &$form, FormStateInterface $form_state) {
   $view = $form_state->get('view');
   $display_id = $form_state->get('display_id');
   $type = $form_state->get('type');
