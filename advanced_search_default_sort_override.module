@@ -51,7 +51,7 @@ function advanced_search_default_sort_override_views_pre_build(ViewExecutable $v
   $paramList = \Drupal::request()->query->all();
 
   // Only do the processing if there is any active search.
-  if (count($paramList) > 0) {
+  if (count($paramList) > 0 && array_key_exists('a', $paramList)) {
     // Iterate through the LIVE instantiated sort objects.
     foreach ($view->sort as $id => $handler) {
       if (!empty($handler->options['default_sort_only'])) {
